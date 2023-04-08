@@ -1,0 +1,27 @@
+# permissions for end users to view ddnsrecords.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ddnsrecord-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ddns-kubernetes-controller
+    app.kubernetes.io/part-of: ddns-kubernetes-controller
+    app.kubernetes.io/managed-by: kustomize
+  name: ddnsrecord-viewer-role
+rules:
+- apiGroups:
+  - ddns.mschenck.com
+  resources:
+  - ddnsrecords
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ddns.mschenck.com
+  resources:
+  - ddnsrecords/status
+  verbs:
+  - get

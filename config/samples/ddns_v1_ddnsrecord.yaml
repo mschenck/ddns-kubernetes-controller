@@ -1,0 +1,14 @@
+apiVersion: ddns.mschenck.com/v1
+kind: DdnsRecord
+metadata:
+  labels:
+    app.kubernetes.io/name: ddnsrecord
+    app.kubernetes.io/instance: ddnsrecord-sample
+    app.kubernetes.io/part-of: ddns-kubernetes-controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ddns-kubernetes-controller
+  name: ddnsrecord-sample
+spec:
+  record: "homelab"
+  zone: "mschenck.com"
+  ttl: "30s"

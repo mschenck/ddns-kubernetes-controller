@@ -1,0 +1,31 @@
+# permissions for end users to edit ddnsrecords.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ddnsrecord-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ddns-kubernetes-controller
+    app.kubernetes.io/part-of: ddns-kubernetes-controller
+    app.kubernetes.io/managed-by: kustomize
+  name: ddnsrecord-editor-role
+rules:
+- apiGroups:
+  - ddns.mschenck.com
+  resources:
+  - ddnsrecords
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ddns.mschenck.com
+  resources:
+  - ddnsrecords/status
+  verbs:
+  - get
