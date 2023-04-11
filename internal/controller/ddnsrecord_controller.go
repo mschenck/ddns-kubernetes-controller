@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	ddnsv1 "github.com/mschenck/ddns-kubernetes-controller/api/v1"
+	dnslookup "github.com/mschenck/ddns-kubernetes-controller/internal/dnslookup"
 	dnsprovider "github.com/mschenck/ddns-kubernetes-controller/internal/dnsprovider"
 	iplookup "github.com/mschenck/ddns-kubernetes-controller/internal/iplookup"
 )
@@ -69,7 +70,7 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Duration for both record TTL as well as re-check interval
 	recordDuration := ddnsRecord.Spec.Ttl.Duration
 	recordSeconds := int64(ddnsRecord.Spec.Ttl.Seconds())
-	ctrlResult := ctrl.Result{RequeueAfter: recordDuration}
+	ctrlResult := ctrl.Result{RequeueAfter: recordDuration} // Retry every TTL
 
 	// Query Public IP
 	var ip string
@@ -78,16 +79,15 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		log.Log.Error(err, "Error fetching IP")
 		return ctrl.Result{}, err
 	}
-
 	log.Log.Info(fmt.Sprintf("IP is: %q", ip))
 
 	// Check what the zone record resolves to.
-	var addrs []string
+	var dnsIp string
+	dnsIp, err = dnslookup.DnsLookup(ctx, ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
 	fqdn := fmt.Sprintf("%s.%s", ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
-	addrs, err = net.LookupHost(fqdn)
 	if err == nil {
-		log.Log.Info(fmt.Sprintf("%q resolves to %q", fqdn, ip))
-		if addrs[0] == ip {
+		log.Log.Info(fmt.Sprintf("%q resolves to %q", fqdn, dnsIp))
+		if dnsIp == ip {
 			return ctrlResult, nil
 		}
 	} else if err.(*net.DNSError).IsNotFound {
