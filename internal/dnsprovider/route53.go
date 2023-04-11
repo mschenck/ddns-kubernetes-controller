@@ -3,6 +3,7 @@ package dnsprovider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -31,6 +32,10 @@ func (a *Aws) UpdateRecord(record, zone, ip string, TTL int64) (err error) {
 	r53Client := route53.NewFromConfig(cfg)
 
 	// Lookup Zone ID
+	if !strings.HasSuffix(zone, ".") {
+		zone = fmt.Sprintf("%s.", zone)
+	}
+
 	var zoneOutput *route53.ListHostedZonesOutput
 	zoneOutput, err = r53Client.ListHostedZones(ctx, nil)
 	if err != nil {
