@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"net"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -65,6 +66,11 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// Duration for both record TTL as well as re-check interval
+	recordDuration := ddnsRecord.Spec.Ttl.Duration
+	recordSeconds := int64(ddnsRecord.Spec.Ttl.Seconds())
+	ctrlResult := ctrl.Result{RequeueAfter: recordDuration}
+
 	// Query Public IP
 	var ip string
 	ip, err = iplookup.Ipify()
@@ -75,18 +81,32 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	log.Log.Info(fmt.Sprintf("IP is: %q", ip))
 
-	// TODO(mschenck): Check what the zone record resolves to.
+	// Check what the zone record resolves to.
+	var addrs []string
+	fqdn := fmt.Sprintf("%s.%s", ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
+	addrs, err = net.LookupHost(fqdn)
+	if err == nil {
+		log.Log.Info(fmt.Sprintf("%q resolves to %q", fqdn, ip))
+		if addrs[0] == ip {
+			return ctrlResult, nil
+		}
+	} else if err.(*net.DNSError).IsNotFound {
+		log.Log.Info("Record does not exist.")
+	} else if err != nil {
+		log.Log.Error(err, fmt.Sprintf("Failed DNS lookup for %s", fqdn))
+		return ctrl.Result{}, err
+	}
 
 	// Update zone record
 	a := dnsprovider.Aws{}
-	duration := int64(ddnsRecord.Spec.Ttl.Seconds())
-	err = a.UpdateRecord(ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone, ip, duration)
+	err = a.UpdateRecord(ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone, ip, recordSeconds)
 	if err != nil {
 		log.Log.Error(err, "Error Updating DNS Record")
 		return ctrl.Result{}, err
 	}
+	log.Log.Info("Updated zone record.")
 
-	return ctrl.Result{}, nil
+	return ctrlResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
