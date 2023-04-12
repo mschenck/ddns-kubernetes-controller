@@ -98,5 +98,12 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+        volumeMounts:
+        - name: secret-config
+          mountPath: /etc/ddns-config.yaml
+      volumes:
+      - name: secret-config
+        secret:
+          secretName: ddns-config
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
