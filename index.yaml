@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  ddns-kubernetes-controller:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-04-13T15:38:49.031378-04:00"
+    description: A Helm chart for ddns-kubernetes-controller
+    digest: 16264d7d52f495567e54fc0aa73ec21cd5435d426e07533f699e185bf403b248
+    name: ddns-kubernetes-controller
+    type: application
+    urls:
+    - ddns-kubernetes-controller-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-04-13T15:38:49.030968-04:00"
