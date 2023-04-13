@@ -38,6 +38,10 @@ type DdnsRecordReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+const (
+	CONFIG_FILE = "/etc/ddns-config/ddns-config.yaml"
+)
+
 //+kubebuilder:rbac:groups=ddns.mschenck.com,resources=ddnsrecords,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=ddns.mschenck.com,resources=ddnsrecords/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=ddns.mschenck.com,resources=ddnsrecords/finalizers,verbs=update
@@ -60,8 +64,10 @@ type DdnsRecordReconciler struct {
 func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 	var err error
-
 	var ddnsRecord ddnsv1.DdnsRecord
+	var fqdn, dnsIp, externalIp string
+	var dns dnsprovider.DnsProvider
+
 	if err = r.Get(ctx, req.NamespacedName, &ddnsRecord); err != nil {
 		log.Log.Error(err, "unable to fetch DdnsRecord")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -73,21 +79,20 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	ctrlResult := ctrl.Result{RequeueAfter: recordDuration} // Retry every TTL
 
 	// Query Public IP
-	var ip string
-	ip, err = iplookup.Ipify()
+	externalIp, err = iplookup.Ipify()
 	if err != nil {
 		log.Log.Error(err, "Error fetching IP")
 		return ctrl.Result{}, err
+	} else {
+		log.Log.Info(fmt.Sprintf("IP is: %q", externalIp))
 	}
-	log.Log.Info(fmt.Sprintf("IP is: %q", ip))
 
 	// Check what the zone record resolves to.
-	var dnsIp string
+	fqdn = fmt.Sprintf("%s.%s", ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
 	dnsIp, err = dnslookup.DnsLookup(ctx, ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
-	fqdn := fmt.Sprintf("%s.%s", ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone)
 	if err == nil {
 		log.Log.Info(fmt.Sprintf("%q resolves to %q", fqdn, dnsIp))
-		if dnsIp == ip {
+		if dnsIp == externalIp {
 			return ctrlResult, nil
 		}
 	} else if err.(*net.DNSError).IsNotFound {
@@ -97,14 +102,21 @@ func (r *DdnsRecordReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// Configure DNS Provider
+	dns, err = dnsprovider.ConfigureDnsProvider(ctx, ddnsRecord.Spec.Provider, CONFIG_FILE)
+	if err != nil {
+		log.Log.Error(err, "Error Configuring DNS Provider")
+		return ctrl.Result{}, err
+	}
+
 	// Update zone record
-	a := dnsprovider.Aws{}
-	err = a.UpdateRecord(ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone, ip, recordSeconds)
+	err = dns.UpdateRecord(ctx, ddnsRecord.Spec.Record, ddnsRecord.Spec.Zone, externalIp, recordSeconds)
 	if err != nil {
 		log.Log.Error(err, "Error Updating DNS Record")
 		return ctrl.Result{}, err
+	} else {
+		log.Log.Info("Updated zone record.")
 	}
-	log.Log.Info("Updated zone record.")
 
 	return ctrlResult, nil
 }
