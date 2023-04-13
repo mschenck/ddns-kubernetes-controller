@@ -1,5 +1,7 @@
 # ddns-kubernetes-controller
 
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/ddns-kubernetes-controller)](https://artifacthub.io/packages/search?repo=ddns-kubernetes-controller)
+
 ## Overview
 
 Dynamic DNS (kubernetes controller) will manage any number of DNS records and update them to resolve to your external IP.
@@ -45,3 +47,14 @@ aws:
   AWS_ACCESS_KEY_ID: <access key ID>
   AWS_SECRET_ACCESS_KEY: <secret accesss key>
 ```
+
+## Helm
+
+Add repository:
+
+        helm repo add ddns-kubernetes-controller https://mschenck.github.io/ddns-kubernetes-controller
+
+Install chart:
+
+        helm install ddns-kubernetes-controller ddns-kubernetes-controller/ddns-kubernetes-controller
+
