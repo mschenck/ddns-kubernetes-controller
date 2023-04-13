@@ -36,6 +36,9 @@ type DdnsRecordSpec struct {
 
 	// TTL (time-to-live) of the DNS record (and update interval)/
 	Ttl *metav1.Duration `json:"ttl,omitempty"`
+
+	// DNS provider (configured via secret "ddns-config")
+	Provider string `json:"provider"`
 }
 
 // DdnsRecordStatus defines the observed state of DdnsRecord

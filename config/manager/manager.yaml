@@ -100,7 +100,7 @@ spec:
             memory: 64Mi
         volumeMounts:
         - name: secret-config
-          mountPath: /etc/ddns-config.yaml
+          mountPath: /etc/ddns-config
       volumes:
       - name: secret-config
         secret:

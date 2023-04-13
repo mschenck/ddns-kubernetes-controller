@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: ddns-kubernetes-controller
   name: ddnsrecord-sample
 spec:
-  record: "homelab"
-  zone: "mschenck.com"
-  ttl: "30s"
+  record: homelab
+  zone: mschenck.com
+  ttl: 30s
+  provider: aws

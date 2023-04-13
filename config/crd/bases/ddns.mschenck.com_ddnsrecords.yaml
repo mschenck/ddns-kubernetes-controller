@@ -35,6 +35,9 @@ spec:
           spec:
             description: DdnsRecordSpec defines the desired state of DdnsRecord
             properties:
+              provider:
+                description: DNS provider (configured via secret "ddns-config")
+                type: string
               record:
                 description: Record to be updated for the given Zone.
                 type: string
@@ -45,6 +48,7 @@ spec:
                 description: Zone (DNS domain) of the record to updated.
                 type: string
             required:
+            - provider
             - record
             - zone
             type: object

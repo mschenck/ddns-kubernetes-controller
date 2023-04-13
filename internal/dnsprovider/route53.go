@@ -7,29 +7,52 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	r53types "github.com/aws/aws-sdk-go-v2/service/route53/types"
+)
+
+const (
+	AWS_ACCESS_KEY = "AWS_ACCESS_KEY_ID"
+	AWS_SECRET_KEY = "AWS_SECRET_ACCESS_KEY"
 )
 
 var (
 	AWS_REGION = "us-east-1"
 )
 
-type Aws struct{}
+type Aws struct {
+	Client *route53.Client
+}
 
-func (a *Aws) UpdateRecord(record, zone, ip string, TTL int64) (err error) {
+func NewAws(ctx context.Context, accessKeyId, secretAccessKey string) (Aws, error) {
 	var cfg aws.Config
-	var zoneId *string
-	ctx := context.TODO()
+	var err error
+
+	a := Aws{}
 
 	// Configure AWS client
 	cfg, err = config.LoadDefaultConfig(ctx,
 		config.WithRegion(AWS_REGION),
+		config.WithCredentialsProvider(credentials.StaticCredentialsProvider{
+			Value: aws.Credentials{
+				AccessKeyID:     accessKeyId,
+				SecretAccessKey: secretAccessKey,
+				SessionToken:    "",
+				Source:          "ddns-kubernetes-controller",
+			},
+		}),
 	)
 	if err != nil {
-		return err
+		return a, err
 	}
-	r53Client := route53.NewFromConfig(cfg)
+	a.Client = route53.NewFromConfig(cfg)
+
+	return a, nil
+}
+
+func (a Aws) UpdateRecord(ctx context.Context, record, zone, ip string, TTL int64) (err error) {
+	var zoneId *string
 
 	// Lookup Zone ID
 	if !strings.HasSuffix(zone, ".") {
@@ -37,7 +60,7 @@ func (a *Aws) UpdateRecord(record, zone, ip string, TTL int64) (err error) {
 	}
 
 	var zoneOutput *route53.ListHostedZonesOutput
-	zoneOutput, err = r53Client.ListHostedZones(ctx, nil)
+	zoneOutput, err = a.Client.ListHostedZones(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -73,7 +96,7 @@ func (a *Aws) UpdateRecord(record, zone, ip string, TTL int64) (err error) {
 		HostedZoneId: zoneId,
 	}
 
-	_, err = r53Client.ChangeResourceRecordSets(ctx, &params)
+	_, err = a.Client.ChangeResourceRecordSets(ctx, &params)
 	if err != nil {
 		return err
 	}
